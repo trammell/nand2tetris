@@ -30,7 +30,7 @@ func (c *Command) GetAsm() string {
 	}
 
 	// pop
-	if c.vmCommand == "pop" {
+	if c.fields[0] == "pop" {
 		return c.Pop()
 	}
 
@@ -99,10 +99,13 @@ func (c *Command) Pop() string {
 }
 
 // trim leading whitespace on each line in a multiline string
+// and remove empty lines
 func Trim(str string) string {
 	var out string
 	for _, element := range strings.Split(str, "\n") {
-		out += strings.TrimSpace(element) + "\n"
+		if len(strings.TrimSpace(element)) != 0 {
+			out += strings.TrimSpace(element) + "\n"
+		}
 	}
 	return out
 }
