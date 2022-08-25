@@ -21,7 +21,7 @@ var RootCmd = &cobra.Command{
 }
 
 func setUpLogging(cmd *cobra.Command, args []string) {
-	output := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: `//`}
+	output := zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: `>>>`}
 	output.FormatLevel = func(i interface{}) string {
 		return ``
 	}
