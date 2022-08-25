@@ -1,8 +1,8 @@
 
-.PHONY: clean all build run test-asm test-vmx 
+.PHONY: clean all build run test-asm test-vmx
 
 usage:
-	@echo "usage: make [all|build|clean|test]"
+	@echo "usage: make [all|build|clean|test|tools]"
 
 all: build
 
@@ -12,6 +12,9 @@ n2t build: cmd/*.go pkg/asm/*.go pkg/vmx/*.go
 clean:
 	rm -f n2t coverage.out *.asm
 	go clean -testcache ./...
+
+realclean:
+	rm -rf tools/
 
 test-asm:
 	go test -v ./pkg/asm
@@ -29,3 +32,11 @@ test-vmx: n2t
 
 SimpleAdd.asm: n2t pkg/vmx/testdata/SimpleAdd/SimpleAdd.vm
 	./n2t vmx pkg/vmx/testdata/SimpleAdd/SimpleAdd.vm
+
+tools: $(HOME)/Downloads/nand2tetris.zip
+	unzip -o $(HOME)/Downloads/nand2tetris.zip "nand2tetris/tools/*" -d tools
+
+# special commands to create the Coursera submission file
+project7.zip:
+	zip project7.zip blargh
+
