@@ -20,8 +20,8 @@ func (c *Command) GetAsm() string {
 	}
 
 	// arithmetic commands
-	if regexp.MustCompile(`^\s*(add|sub|neg|eq|gt)\s*$`).MatchString(c.vmCommand) {
-		return c.Math()
+	if regexp.MustCompile(`^\s*(add|sub|neg|eq|gt|lt|and|or|not)\s*$`).MatchString(c.vmCommand) {
+		return c.Arithmetic()
 	}
 
 	// push
@@ -38,10 +38,11 @@ func (c *Command) GetAsm() string {
 	return fmt.Sprintf("ERROR: I don't recognize VM command '%s'\n", c.vmCommand)
 }
 
-func (c *Command) Math() string {
+func (c *Command) Arithmetic() string {
 	var asm string
 	switch c.fields[0] {
 	case "add":
+		// pop top of stack into D, then add it to *(SP-1)
 		asm = `
 			// add
 			@SP        // SP--
@@ -49,8 +50,10 @@ func (c *Command) Math() string {
 			A=M        // D = *SP
 			D=M
 			A=A-1      // *(SP-1) = *(SP-1) + D 		
-			M=D+M`
+			M=D+M
+		`
 	case "sub":
+		// pop top of stack into D, then subtract it from *(SP-1)
 		asm = `
 			// sub
 			@SP        // SP--
@@ -58,14 +61,83 @@ func (c *Command) Math() string {
 			A=M        // D = *SP
 			D=M
 			A=A-1      // *(SP-1) = *(SP-1) - D
-			M=M-D`
+			M=M-D
+		`
 	case "neg":
+		// stack size doesn't change, we can modify *(SP-1) in place
 		asm = `
 			// neg
 			@SP        // *(SP-1) = -(*(SP-1))
 			A=M
 			A=A-1
 			M=-M
+		`
+	case "eq":
+		// a lot like `sub` but invert the result
+		asm = `
+			// eq
+			@SP        // SP--
+			M=M-1
+			A=M        // D = *SP
+			D=M
+			A=A-1      // *(SP-1) = *(SP-1) - D
+			M=M-D
+			M=!M       // *(SP-1) = ! *(SP-1)
+		`
+	case "gt":
+		// pop top of stack into D
+		asm = `
+			// lt
+			@SP        // SP--
+			M=M-1
+			A=M        // D = *SP
+			D=M
+			A=A-1      // D = *(SP-1) - D
+			D=M-D
+			// D = D & 0x8000
+			M=!M       // *(SP-1) = ! *(SP-1)
+		`
+	case "lt":
+		// a lot like sub but check the MSBit
+		asm = `
+			// lt
+			@SP        // SP--
+			M=M-1
+			A=M        // D = *SP
+			D=M
+			A=A-1      // D = *(SP-1) - D
+			D=M-D
+			// D = D & 0x8000
+			M=!M       // *(SP-1) = ! *(SP-1)
+		`
+	case "and":
+		asm = `
+			// sub
+			@SP        // SP--
+			M=M-1
+			A=M        // D = *SP
+			D=M
+			A=A-1      // *(SP-1) = *(SP-1) & D
+			M=M&D
+		`
+	case "or":
+		asm = `
+			// sub
+			@SP        // SP--
+			M=M-1
+			A=M        // D = *SP
+			D=M
+			A=A-1      // *(SP-1) = *(SP-1) | D
+			M=M|D
+		`
+	case "not":
+		// a lot like neg, change *(SP-1) in place
+		asm = `
+			// not
+			@SP        // *(SP-1) = ! *(SP-1)
+			A=M
+			A=A-1
+			M=!M
 		`
 	default:
 		asm = "ERROR"

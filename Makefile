@@ -29,6 +29,7 @@ test-vmx: n2t
 	go test -v ./pkg/vmx
 	./n2t vmx pkg/vmx/testdata/SimpleAdd/SimpleAdd.vm
 	./n2t asm pkg/vmx/testdata/SimpleAdd/SimpleAdd.asm > pkg/vmx/testdata/SimpleAdd/SimpleAdd.hack
+	./n2t vmx pkg/vmx/testdata/StackTest/
 
 SimpleAdd.asm: n2t pkg/vmx/testdata/SimpleAdd/SimpleAdd.vm
 	./n2t vmx pkg/vmx/testdata/SimpleAdd/SimpleAdd.vm
