@@ -8,8 +8,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func NewCommand(src string) Command {
-	return Command{vmCommand: src, fields: strings.Fields(src)}
+func NewCommand(src string, unique string) *Command {
+	return &Command{
+		vmCommand: src,
+		unique:    unique,
+		fields:    strings.Fields(src),
+	}
 }
 
 func (c *Command) GetAsm() string {
@@ -73,25 +77,38 @@ func (c *Command) Arithmetic() string {
 			M=-M
 		`
 	case "eq":
-		// a lot like `sub` but invert the result
-		asm = `
+		// FIXME: need to make this cleaner.
+		labelIf := "eq_if." + c.unique
+		labelElse := "eq_else." + c.unique
+		asms := []string{`
 			// eq
 			@SP        // SP--
-			M=M-1
-			A=M        // D = *SP
+			AM=M-1     // D = *SP
 			D=M
 			A=A-1      // *(SP-1) = *(SP-1) - D
-			M=M-D
-			M=!M       // *(SP-1) = ! *(SP-1)
-		`
+			D=M-D
+			`,
+			"@" + labelIf,
+			`
+			D;JEQ       // jump to eq_if 
+            D=0         // ELSE block D = false
+			@labelEnd
+			0;JMP
+			(@labelIf)
+			D=-1        // D = true
+			@labelEnd
+            @SP         // *SP = D
+			A=M-1
+			M=D
+		`}
+		asm = strings.Join(asms, "\n")
 	case "gt":
 		// pop top of stack into D
 		asm = `
 			// lt
 			@SP        // SP--
-			M=M-1
-			A=M        // D = *SP
-			D=M
+			AM=M-1
+			D=M        // D = *SP
 			A=A-1      // D = *(SP-1) - D
 			D=M-D
 			// D = D & 0x8000
@@ -101,14 +118,12 @@ func (c *Command) Arithmetic() string {
 		// a lot like sub but check the MSBit
 		asm = `
 			// lt
-			@SP        // SP--
-			M=M-1
-			A=M        // D = *SP
+			@SP
+			AM=M-1
 			D=M
-			A=A-1      // D = *(SP-1) - D
+			A=A-1
 			D=M-D
-			// D = D & 0x8000
-			M=!M       // *(SP-1) = ! *(SP-1)
+
 		`
 	case "and":
 		asm = `
@@ -141,6 +156,7 @@ func (c *Command) Arithmetic() string {
 		`
 	default:
 		asm = "ERROR"
+		log.Fatal().Msgf(`Unrecognized VM command: %s`, c.fields[0])
 	}
 	return Trim(asm)
 }
